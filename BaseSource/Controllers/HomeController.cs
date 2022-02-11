@@ -80,7 +80,7 @@ namespace BaseSource.Controllers
         public async Task<IActionResult> PostDataAsync(string _namespace, string name, List<string> head, List<string> body)
         {
             var result = new List<MessageResponseList>();
-            var sqlQuery = @"IF (Select count(1) from from tbl_NearestBBPOutlet(nolock) where ISNULL(_IsSent,0) = 0) = 0 
+            var sqlQuery = @"IF (Select count(1) from tbl_NearestBBPOutlet(nolock) where ISNULL(_IsSent,0) = 0) = 0 
                                     update tbl_NearestBBPOutlet set _IsSent = 0
                              select Top 1000 _Id id,_AgentName AgentName,_ShopName ShopName,_Mobile Mobile,_Address Address,_PinCode PinCode,_City City,_State State from tbl_NearestBBPOutlet(nolock) where ISNULL(_IsSent,0) = 0";
             var outlets = await _dapper.GetAll<BBPSOutlet>(sqlQuery, new DynamicParameters(), System.Data.CommandType.Text);
