@@ -1,0 +1,32 @@
+﻿@{
+    ViewData["Title"] = "Home Page";
+}
+
+<div class="row">
+    <div class="col-sm-12">
+        <div class="table-responsive" style="max-height:calc(100vh - 150px);overflow-y:auto;">
+            <gridOutlet></gridOutlet>
+        </div>
+    </div>
+</div>
+
+@section scripts{
+    <script>
+        const loadGrid = () => {
+            $.post("Home/BBPSOutlets").done(result => $('gridOutlet').html(result)).fail(xhr => { alert("Something went wrong"); console.error(xhr.responseText) });
+        };
+        const laodForm = () => {
+            $.post("Home/InitialForm")
+                .done(result => {
+                    mdlA.id = "formWin";
+                    mdlA.title = "Form";
+                    mdlA.content = result;
+                    mdlA.modal(mdlA.size.default);
+                })
+                .fail(xhr => {
+                    alert("Something went wrong"); console.error(xhr.responseText)
+                });
+        }
+        (() => { loadGrid(); laodForm() })();
+    </script>
+}
