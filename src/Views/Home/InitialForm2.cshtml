@@ -1,0 +1,97 @@
+﻿<div class="row">
+    <div class="col-sm-12">
+        <div class="form-group" style="border-bottom:1px solid #0094ff">
+            <label class="h5">Form</label>
+        </div>
+        <div class="form-group">
+            <input class="form-control" type="text" placeholder="Enter APIKey" id="txtAPIKey" />
+        </div>
+        <div class="form-group">
+            <input class="form-control" type="text" placeholder="Enter Namespace" id="txtNamespace" />
+        </div>
+        <div class="form-group">
+            <input class="form-control" type="text" placeholder="Enter Name" id="txtName" />
+        </div>
+    </div>
+</div>
+<div class="row" id="head">
+    <div class="col-sm-12">
+        <div class="form-group" style="border-bottom:1px solid #0094ff">
+            <label class="h5">Head</label>
+        </div>
+        <div class="form-group">
+            <input class="form-control" type="text" />
+        </div>
+    </div>
+</div>
+<div class="row" id="body">
+    <div class="col-sm-12">
+        <div class="form-group" style="border-bottom:1px solid #0094ff">
+            <label class="h5">Body</label>
+        </div>
+        <div class="form-group">
+            <input class="form-control" type="text" />
+        </div>
+        <div class="form-group">
+            <input class="form-control" type="text" />
+            <span class="badge badge-info float-right mt-1 more"><i class="fa fa-plus"></i> more</span>
+        </div>
+        @*<div class="form-group">
+                <input class="form-control" type="text" />
+            </div>*@
+        @*<div class="form-group">
+                <input class="form-control" type="text" />
+            </div>
+            <div class="form-group">
+                <input class="form-control" type="text" />
+            </div>*@
+    </div>
+</div>
+<div class="row">
+    <div class="col-sm-12">
+        <div class="form-group">
+            <button class="btn btn-outline-info" id="btnSubmit">Submit</button>
+        </div>
+        <div class="form-group">
+            <result></result>
+        </div>
+    </div>
+</div>
+
+@section Scripts{
+<script>
+    $('#btnSubmit').click(e => {
+        let __head = [], __body = [];
+        $('#head').find('input').each(function () {
+            if ($(this).val() !== null && $(this).val() !== '') {
+                __head.push($(this).val())
+            }
+        });
+        $('#body').find('input').each(function () {
+            if ($(this).val() !== null && $(this).val() !== '') {
+                __body.push($(this).val())
+            }
+        })
+        $(e.currentTarget).prop('disabled', true).text('Requesting...');
+        let req = {
+            _namespace: $('#txtNamespace').val(),
+            apiKey: $('#txtAPIKey').val(),
+            name: $('#txtName').val(),
+            head: __head,
+            body: __body,
+        };
+        $.post('/Home/PostAlternateData', req).done(result => {
+            $('result').html(result);
+        }).fail(xhr => { alert('something went wrong'); console.log(xhr.responseText) }).always(() => {
+            $(e.currentTarget).prop('disabled', false).text('Submit');
+        });
+    });
+    $('body').on('click', '.more', e => {
+        let element = $(e.currentTarget);
+        let parent = element.parent('.form-group');
+        let __clone = parent.clone();
+        parent.after(__clone);
+        element.remove();
+    });
+</script>
+}

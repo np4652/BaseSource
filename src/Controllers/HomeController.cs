@@ -34,6 +34,11 @@ namespace BaseSource.Controllers
             return View();
         }
 
+        [Route("initialform2")]
+        public IActionResult initialform2()
+        {
+            return View();
+        }
         public IActionResult Privacy()
         {
             return View();
@@ -77,7 +82,7 @@ namespace BaseSource.Controllers
             return PartialView();
         }
 
-        public async Task<IActionResult> PostDataAsync(string _namespace, string name, List<string> head, List<string> body)
+        public async Task<IActionResult> PostDataAsync(string _namespace, string name, List<string> head, List<string> body, string apiKey)
         {
             var result = new List<MessageResponseList>();
             var sqlQuery = @"IF (Select count(1) from tbl_NearestBBPOutlet(nolock) where ISNULL(_IsSent,0) = 0) = 0 
@@ -94,6 +99,34 @@ namespace BaseSource.Controllers
                     if (IsVeryfy)
                     {
                         var response = await SendMessageAsync(head, body, o.Mobile, _namespace, name);
+                        result.Add(new MessageResponseList
+                        {
+                            contact = o.Mobile,
+                            MessageResponse = response
+                        });
+                    }
+                }
+            }
+            return Json(result);
+        }
+
+        public async Task<IActionResult> PostAlternateDataAsync(string _namespace, string name, List<string> head, List<string> body, string apiKey)
+        {
+            var result = new List<MessageResponseList>();
+            var sqlQuery = @"IF (Select count(1) from tbl_BBPOutletMobiles(nolock) where ISNULL(_IsSent,0) = 0) = 0 
+                             	update tbl_BBPOutletMobiles set _IsSent = 0
+                             select Top 1000 _Id id,_Mobile Mobile from tbl_BBPOutletMobiles(nolock) where ISNULL(_IsSent,0) = 0";
+            var outlets = await _dapper.GetAll<BBPSOutlet>(sqlQuery, new DynamicParameters(), System.Data.CommandType.Text);
+            sqlQuery = @"update top (1000) tbl_BBPOutletMobiles set _IsSent = 1 where ISNULL(_IsSent,0) = 0";
+            _dapper.Update<int>(sqlQuery, new DynamicParameters(), System.Data.CommandType.Text);
+            if (outlets != null)
+            {
+                foreach (var o in outlets)
+                {
+                    var IsVeryfy = await VerifyContactAsync(o.Mobile);
+                    if (IsVeryfy)
+                    {
+                        var response = await SendMessageAsync(head, body, o.Mobile, _namespace, name, apiKey);
                         result.Add(new MessageResponseList
                         {
                             contact = o.Mobile,
@@ -128,8 +161,9 @@ namespace BaseSource.Controllers
             return result;
         }
 
-        private async Task<MessageResponse> SendMessageAsync(List<string> head, List<string> body, string contact, string _namespace, string name)
+        private async Task<MessageResponse> SendMessageAsync(List<string> head, List<string> body, string contact, string _namespace, string name, string apiKey = "")
         {
+            apiKey = !string.IsNullOrEmpty(apiKey) ? apiKey : APIKey;
             if (contact.Length == 10)
             {
                 contact = string.Concat("91", contact);
@@ -198,7 +232,7 @@ namespace BaseSource.Controllers
             };
             var headers = new Dictionary<string, string>
                 {
-                    {"D360-API-KEY",APIKey}
+                    {"D360-API-KEY",apiKey}
                 };
             string reponse = await APIRequest.O.PostJsonData(APIs["Message"], contactRequestParam, headers).ConfigureAwait(false);
             var response = JsonConvert.DeserializeObject<MessageResponse>(reponse);

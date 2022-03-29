@@ -15,18 +15,6 @@
         const loadGrid = () => {
             $.post("Home/BBPSOutlets").done(result => $('gridOutlet').html(result)).fail(xhr => { alert("Something went wrong"); console.error(xhr.responseText) });
         };
-        //const laodForm = () => {
-        //    $.post("Home/InitialForm")
-        //        .done(result => {
-        //            mdlA.id = "formWin";
-        //            mdlA.title = "Form";
-        //            mdlA.content = result;
-        //            mdlA.modal(mdlA.size.default);
-        //        })
-        //        .fail(xhr => {
-        //            alert("Something went wrong"); console.error(xhr.responseText)
-        //        });
-        //}
         (() => { loadGrid(); openInitialForm() })();
     </script>
 }
