@@ -107,7 +107,7 @@ namespace BaseSource.Controllers
                     }
                 }
             }
-            return Json(result);
+            return Json(result ?? new List<MessageResponseList>());
         }
 
         public async Task<IActionResult> PostAlternateDataAsync(string _namespace, string name, List<string> head, List<string> body, string apiKey)
@@ -151,9 +151,13 @@ namespace BaseSource.Controllers
                 {
                     {"D360-API-KEY",APIKey}
                 };
-            string reponse = await APIRequest.O.PostJsonData(APIs["VerifyContact"], contactRequestParam, headers).ConfigureAwait(false);
-            var contactResponse = JsonConvert.DeserializeObject<ContactRequestResponse>(reponse);
-            if (contactResponse != null && contactResponse.contacts.Count > 0)
+
+            string response = await APIRequest.O.PostJsonData(APIs["VerifyContact"], contactRequestParam, headers).ConfigureAwait(false);
+            var sqlQuery = @"insert into log_Wab360dialog_VerifyResponse(_response) values(@response)";
+            _ = _dapper.Update<int>(sqlQuery, new { response }, System.Data.CommandType.Text);
+
+            var contactResponse = JsonConvert.DeserializeObject<ContactRequestResponse>(response);
+            if (contactResponse != null && contactResponse.contacts?.Count > 0)
             {
                 result = contactResponse.contacts.FirstOrDefault().status.Equals("valid", StringComparison.OrdinalIgnoreCase);
 
