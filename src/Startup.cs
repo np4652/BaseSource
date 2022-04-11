@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using BaseSource.AppCode.Service;
+using BaseSource.AppCode;
 
 namespace BaseSource
 {
@@ -26,6 +27,7 @@ namespace BaseSource
         {
             services.AddControllersWithViews();
             services.AddScoped<IDapper, AppCode.Service.Dapper>();
+            services.AddScoped<IBL, BL>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
