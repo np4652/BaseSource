@@ -77,5 +77,20 @@ namespace BaseSource.AppCode.Helper
             return result;
         }
 
+
+        public async Task<HttpResponseMessage> postAsync(string url,object PostData)
+        {
+            var res = new HttpResponseMessage();
+            using (HttpClient client = new HttpClient())
+            {
+                StringContent content = new StringContent(JsonConvert.SerializeObject(PostData), Encoding.UTF8, "application/json");
+                string endpoint = url;
+                using (var Response = await client.PostAsync(endpoint, content))
+                {
+                    res = Response;
+                }
+            }
+            return res;
+        }
     }
 }

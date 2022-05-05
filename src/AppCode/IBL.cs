@@ -10,5 +10,8 @@ namespace BaseSource.AppCode
     {
         Task<List<MessageResponseList>> PostDataAsync(string _namespace, string name, List<string> head, List<string> body, string apiKey);
         Task<List<MessageResponseList>> PostAlternateDataAsync(string _namespace, string name, List<string> head, List<string> body, string apiKey);
+
+        Task<string> PostInitialForm3DataAsync(InitialForm3 request);
+        Task<List<BBPSOutlet>> BBPSOutletDetail(int top);
     }
 }

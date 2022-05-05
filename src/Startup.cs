@@ -28,6 +28,7 @@ namespace BaseSource
             services.AddControllersWithViews();
             services.AddScoped<IDapper, AppCode.Service.Dapper>();
             services.AddScoped<IBL, BL>();
+            services.AddScoped<IDbContext, DbContext>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

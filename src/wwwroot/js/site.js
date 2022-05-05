@@ -3,6 +3,10 @@
 
 // Write your JavaScript code.
 const openInitialForm = () => {
+    let _url = new URL(window.location.href);
+    if (_url.pathname !== '/') {
+        window.location.href = '/';
+    }
     $.post("Home/InitialForm")
         .done(result => {
             mdlA.id = "formWin";

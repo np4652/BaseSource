@@ -1,7 +1,6 @@
 ﻿using BaseSource.AppCode.Helper;
 using BaseSource.AppCode.Service;
 using BaseSource.Models;
-using Dapper;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
@@ -13,25 +12,28 @@ namespace BaseSource.AppCode
     public class BL : IBL
     {
         private readonly string APIKey;
-        private readonly IDapper _dapper;
+        private readonly IDbContext _context;
         private readonly Dictionary<string, string> APIs = new Dictionary<string, string>(){
             {"VerifyContact", "https://waba.360dialog.io/v1/contacts"},
-            {"Message", "https://waba.360dialog.io/v1/messages/"}
+            {"Message", "https://waba.360dialog.io/v1/messages/"},
+            {"wappsms","https://alerthub.in/wapi/v1/Send/wappsms" }
         };
-        public BL(IDapper dapper)
+        public BL(IDbContext context)
         {
-            _dapper = dapper;
             APIKey = "zoyiIqxWpGHuiv0HPGE6yPnXAK";
+            _context = context;
+        }
+
+        public async Task<List<BBPSOutlet>> BBPSOutletDetail(int top)
+        {
+            List<BBPSOutlet> result = new List<BBPSOutlet>();
+            result = await _context.BBPSOutletDetail(top);
+            return result ?? new List<BBPSOutlet>();
         }
         public async Task<List<MessageResponseList>> PostDataAsync(string _namespace, string name, List<string> head, List<string> body, string apiKey)
         {
             var result = new List<MessageResponseList>();
-            var sqlQuery = @"IF (Select count(1) from tbl_NearestBBPOutlet(nolock) where ISNULL(_IsSent,0) = 0) = 0 
-                                    update tbl_NearestBBPOutlet set _IsSent = 0
-                             select Top 1000 _Id id,_AgentName AgentName,_ShopName ShopName,_Mobile Mobile,_Address Address,_PinCode PinCode,_City City,_State State from tbl_NearestBBPOutlet(nolock) where ISNULL(_IsSent,0) = 0";
-            var outlets = await _dapper.GetAll<BBPSOutlet>(sqlQuery, new DynamicParameters(), System.Data.CommandType.Text);
-            sqlQuery = @"update top (1000) tbl_NearestBBPOutlet set _IsSent = 1 where ISNULL(_IsSent,0) = 0";
-            _dapper.Update<int>(sqlQuery, new DynamicParameters(), System.Data.CommandType.Text);
+            var outlets = await _context.BBPSOutletDetail();
             if (outlets != null)
             {
                 foreach (var o in outlets)
@@ -54,12 +56,7 @@ namespace BaseSource.AppCode
         public async Task<List<MessageResponseList>> PostAlternateDataAsync(string _namespace, string name, List<string> head, List<string> body, string apiKey)
         {
             var result = new List<MessageResponseList>();
-            var sqlQuery = @"IF (Select count(1) from tbl_BBPOutletMobiles(nolock) where ISNULL(_IsSent,0) = 0) = 0 
-                             	update tbl_BBPOutletMobiles set _IsSent = 0
-                             select Top 1000 _Id id,_Mobile Mobile from tbl_BBPOutletMobiles(nolock) where ISNULL(_IsSent,0) = 0";
-            var outlets = await _dapper.GetAll<BBPSOutlet>(sqlQuery, new DynamicParameters(), System.Data.CommandType.Text);
-            sqlQuery = @"update top (1000) tbl_BBPOutletMobiles set _IsSent = 1 where ISNULL(_IsSent,0) = 0";
-            _dapper.Update<int>(sqlQuery, new DynamicParameters(), System.Data.CommandType.Text);
+            var outlets = await _context.BBPOutletMobiles();
             if (outlets != null)
             {
                 foreach (var o in outlets)
@@ -82,26 +79,31 @@ namespace BaseSource.AppCode
         private async Task<bool> VerifyContactAsync(string contact)
         {
             bool result = false;
-            var contactRequestParam = new ContactRequestParam
+            try
             {
-                blocking = "wait",
-                contacts = new List<string> { contact },
-                force_check = true
-            };
-            var headers = new Dictionary<string, string>
+                var contactRequestParam = new ContactRequestParam
+                {
+                    blocking = "wait",
+                    contacts = new List<string> { contact },
+                    force_check = true
+                };
+                var headers = new Dictionary<string, string>
                 {
                     {"D360-API-KEY",APIKey}
                 };
 
-            string response = await APIRequest.O.PostJsonData(APIs["VerifyContact"], contactRequestParam, headers).ConfigureAwait(false);
-            //var sqlQuery = @"insert into log_Wab360dialog_VerifyResponse(_response) values(@response)";
-            //_ = _dapper.Update<int>(sqlQuery, new { response }, System.Data.CommandType.Text);
-            createLog(response);
-            var contactResponse = JsonConvert.DeserializeObject<ContactRequestResponse>(response);
-            if (contactResponse != null && contactResponse.contacts?.Count > 0)
-            {
-                result = contactResponse.contacts.FirstOrDefault().status.Equals("valid", StringComparison.OrdinalIgnoreCase);
+                string response = await APIRequest.O.PostJsonData(APIs["VerifyContact"], contactRequestParam, headers).ConfigureAwait(false);
+                _context.createLog(response);
+                var contactResponse = JsonConvert.DeserializeObject<ContactRequestResponse>(response);
+                if (contactResponse != null && contactResponse.contacts?.Count > 0)
+                {
+                    result = contactResponse.contacts.FirstOrDefault().status.Equals("valid", StringComparison.OrdinalIgnoreCase);
 
+                }
+            }
+            catch (Exception ex)
+            {
+                _context.LogError(ex.Message, "BL-->VerifyContactAsync");
             }
             return result;
         }
@@ -118,7 +120,7 @@ namespace BaseSource.AppCode
                 }
                 var components = new List<Component>();
                 var parameters = new List<Parameter>();
-                if (head != null)
+                if (head != null && head.Count > 0)
                 {
                     foreach (string str in head)
                     {
@@ -140,7 +142,7 @@ namespace BaseSource.AppCode
                         parameters = parameters
                     });
                 }
-                if (body != null)
+                if (body != null && body.Count > 0)
                 {
                     parameters = new List<Parameter>();
                     foreach (string str in body)
@@ -182,20 +184,43 @@ namespace BaseSource.AppCode
                 {
                     {"D360-API-KEY",apiKey}
                 };
+
+                string param = JsonConvert.SerializeObject(contactRequestParam);
+                string headerParam = JsonConvert.SerializeObject(headers);
+                _context.createLog(string.Concat(APIs["Message"], "param :", param, "header : ", headerParam), "SendMessageAsync", "request");
                 string reponse = await APIRequest.O.PostJsonData(APIs["Message"], contactRequestParam, headers).ConfigureAwait(false);
+                _context.createLog(reponse, "SendMessageAsync", "response");
                 response = JsonConvert.DeserializeObject<MessageResponse>(reponse);
             }
             catch (Exception ex)
             {
-                createLog($"Error : {ex.Message}");
+                _context.LogError(ex.Message, "BL-->SendMessageAsync");
             }
             return response;
         }
 
-        private async Task createLog(string response)
+
+        public async Task<string> PostInitialForm3DataAsync(InitialForm3 request)
         {
-            var sqlQuery = @"insert into log_Wab360dialog_VerifyResponse(_response) values(@response)";
-            _ = await _dapper.Update<int>(sqlQuery, new { response }, System.Data.CommandType.Text);
+            var result = string.Empty;
+            var outlets = await _context.BBPOutletMobiles();
+            if (outlets != null)
+            {
+                foreach (var o in outlets)
+                {
+                    if (o.Mobile.Length == 10)
+                    {
+                        o.Mobile = string.Concat("91", o.Mobile);
+                    }
+                    request.jid = o.Mobile;
+                    string param = JsonConvert.SerializeObject(request);
+                    _context.createLog(string.Concat(string.Concat(APIs["wappsms"]), " | params : ", param), "PostInitialForm3DataAsync", "request");
+                    var reponse = await APIRequest.O.PostJsonData(APIs["wappsms"], request).ConfigureAwait(false);
+                    await Task.Delay(5000);
+                    _context.createLog(reponse, "PostInitialForm3DataAsync", "response");
+                }
+            }
+            return result;
         }
     }
 }

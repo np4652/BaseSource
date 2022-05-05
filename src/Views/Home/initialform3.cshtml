@@ -1,0 +1,188 @@
+﻿<div class="row">
+    <div class="col-sm-6">
+        <div class="form-group">
+            <label>User Name</label>
+            <input class="form-control" type="text" placeholder="Enter username" name="UserName" />
+        </div>
+    </div>
+    <div class="col-sm-6">
+        <div class="form-group">
+            <label>Password</label>
+            <input class="form-control" type="text" placeholder="Enter password" name="Password" />
+        </div>
+    </div>
+    <div class="col-sm-12">
+        <div class="form-group">
+            <label>content</label>
+            <textarea class="form-control" type="text" placeholder="Enter content" name="Content"></textarea>
+        </div>
+    </div>
+    <div class="col-sm-6">
+        <div class="form-group">
+            <label>Title Type</label>
+            <select class="form-control" name="titletype">
+                <option value="TEXT">TEXT</option>
+                <option value="DOC">DOC</option>
+                <option value="IMAGE">IMAGE</option>
+                <option value="VIDEO">VIDEO</option>
+            </select>
+        </div>
+    </div>
+    <div class="col-sm-6">
+        <div class="form-group">
+            <label>Title</label>
+            <input class="form-control" type="text" placeholder="Enter title" name="Title" />
+        </div>
+    </div>
+    <div class="col-sm-6">
+        <div class="form-group">
+            <label>From</label>
+            <input class="form-control" type="text" placeholder="Enter from" name="From" />
+        </div>
+    </div>
+    <div class="col-sm-6">
+        <div class="form-group">
+            <label>Footer</label>
+            <input class="form-control" type="text" placeholder="Enter footer" name="Footer" />
+        </div>
+    </div>
+</div>
+<div class="row" id="head">
+    <div class="col-sm-12">
+        <div class="form-group" style="border-bottom:1px solid #0094ff">
+            <label class="h5">Buttons</label>
+        </div>
+        <div class="button" id="CALL">
+            <input type="checkbox" /> Call
+            <div class="set">
+                <div class="form-group ">
+                    <input type="text" name="DisplayText" placeholder="Display text" class="form-control" />
+                </div>
+                <div class="form-group ">
+                    <input type="text" name="Call" placeholder="Display call" class="form-control" />
+                </div>
+            </div>
+            <div class="form-group float-right">
+                <label class="btn btn-sm btn-dark addMore"><i class="fa fa-plus"></i> Add</label>
+            </div>
+
+        </div>
+        <div class="button" id="REPLY">
+            <input type="checkbox" /> REPLY
+            <div class="set">
+                <div class="form-group">
+                    <input type="text" name="DisplayText" placeholder="Display text" class="form-control" />
+                </div>
+            </div>
+            <div class="form-group float-right">
+                <label class="btn btn-sm btn-dark addMore"><i class="fa fa-plus"></i> Add</label>
+            </div>
+        </div>
+        <div class="button" id="URL">
+            <input type="checkbox" /> URL
+            <div class="set">
+                <div class="form-group">
+                    <input type="text" name="DisplayText" placeholder="Display text" class="form-control" />
+                </div>
+                <div class="form-group">
+                    <input type="text" name="URL" placeholder="Display URL" class="form-control" />
+                </div>
+            </div>
+            <div class="form-group float-right">
+                <label class="btn btn-sm btn-dark addMore"><i class="fa fa-plus"></i> Add</label>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="row">
+    <div class="col-sm-12 text-right">
+        <button class="btn btn-outline-info" id="btnSubmit">Submit</button>
+    </div>
+</div>
+
+@section Scripts{
+    <script>
+        (() => {
+            let initialForm3Data = JSON.parse(Q.cookie.get('initialForm3Data'));
+            if (initialForm3Data) {
+                $('[name="UserName"]').val(initialForm3Data.apiusername ?? "");
+                $('[name="Password"]').val(initialForm3Data.apipassword ?? "123");
+                $('[name="From"]').val(initialForm3Data.from ?? "");
+                $('[name="Footer"]').val(initialForm3Data.footer ?? "");
+            }
+            $('.addMore').click(e => {
+                let _parent = $(e.currentTarget).parents('.button');
+                let _html = _parent.find('.set:last').clone();
+                _html.addClass('additionalSet');
+                _parent.find('.set:last').after(_html);
+            })
+        })();
+        $('#btnSubmit').click(e => {
+            let buttons = [];
+            $('[type="checkbox"]:checked').each(function () {
+                let obj = {};
+                let __this = $(this).parent('.button');
+                let __id = __this.attr('id');
+                if (__id === 'CALL') {
+                    $('#' + __id).find('.set').each(function () {
+                        let _set = $(this);
+                        obj = {
+                            btn_type: "CALL",
+                            display_txt: _set.find('[name="DisplayText"]').val(),
+                            call: _set.find('[name="DisplayText"]').val(),
+                        };
+                        buttons.push(obj);
+                    });
+                }
+                else if (__id === 'REPLY') {
+                    $('#' + __id).find('.set').each(function () {
+                        let _set = $(this);
+                        obj = {
+                            btn_type: "REPLY",
+                            display_txt: _set.find('[name="DisplayText"]').val()
+                        };
+                        buttons.push(obj);
+                    })
+                }
+                else if (__id === 'URL') {
+                    $('#' + __id).find('.set').each(function () {
+                        let _set = $(this);
+                        obj = {
+                            btn_type: "URL",
+                            display_txt: __this.find('[name="DisplayText"]').val(),
+                            url: _set.find('[name="URL"]').val(),
+                        };
+                        buttons.push(obj);
+                    });
+                }
+            });
+            let req = {
+                apiusername: $('[name="UserName"]').val(),
+                apipassword: $('[name="Password"]').val(),
+                content: $('[name="Content"]').val(),
+                from: $('[name="From"]').val(),
+                titletype: $('[name="titletype"]').val(),
+                title: $('[name="Title"]').val(),
+                footer: $('[name="Footer"]').val(),
+                buttons: buttons,
+            };
+            /* save in cookies */
+            Q.cookie.set("initialForm3Data", JSON.stringify({
+                apiusername: req.apiusername,
+                apipassword: req.apipassword,
+                from: req.from,
+                footer: req.footer
+            }), 30);
+            /* end of cookies */
+            $.post('/Home/PostInitialForm3', req)
+                .done(result => {
+                    alert('success');
+                    $('.additionalSet').remove();
+                })
+                .fail(xhr => { alert('something went wrong'); console.log(xhr.responseText) })
+                .always(() => {
+
+                });
+        });
+    </script>
+}
